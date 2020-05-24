@@ -1,0 +1,186 @@
+import matplotlib
+import numpy as np
+import csv
+from matplotlib import pyplot as plt
+from matplotlib import animation
+
+def cart2pol(x, y):
+    rho = np.sqrt(x**2 + y**2)
+    phi = np.arctan2(y, x)
+    return(rho, phi)
+
+def smoothListGaussian(listin,strippedXs=False,degree=5):
+    window=degree*2-1
+    weight=np.array([1.0]*window)
+    weightGauss=[]
+    for i in range(window):
+        i=i-degree+1
+        frac=i/float(window)
+        gauss=1/(np.exp((4*(frac))**2))
+        weightGauss.append(gauss)
+    weight=np.array(weightGauss)*weight
+    smoothed=[0.0]*(len(listin)-window)
+    for i in range(len(smoothed)):
+        smoothed[i]=sum(np.array(listin[i:i+window])*weight)/sum(weight)
+    return smoothed
+
+
+x = []
+y = []
+pos = []
+effective_p = []
+h_cross = []
+h_plus = []
+time = []
+r = []
+a = []
+theta = []
+Newtonian = []
+
+
+#Time in seconds
+with open('C:\\Users\\ladan\\Documents\\Research_Project\\time_vector.csv','r') as csvfile:
+    timefile = csv.reader(csvfile, delimiter= ' ')
+    for t in timefile:
+        time.append(float(t[0]))
+
+
+#Orbital plot
+#with open('C:\\Users\\ladan\\Documents\\Research_Project\\pos1.csv','r') as csvfile:
+#    orbit = csv.reader(csvfile, delimiter=' ')
+#    for row in orbit:
+#        xval,yval = str.split(row[0],',')
+#        x.append(float(xval))
+#        y.append(float(yval))
+
+with open('C:\\Users\\ladan\\Documents\\Research_Project\\xgeodesic.csv','r') as csvfile:
+    orbit = csv.reader(csvfile, delimiter=' ')
+    for row in orbit:
+        x.append(float(row[0]))
+
+with open('C:\\Users\\ladan\\Documents\\Research_Project\\ygeodesic.csv','r') as csvfile:
+    orbit = csv.reader(csvfile, delimiter=' ')
+    for row in orbit:
+        y.append(float(row[0]))
+
+
+with open('C:\\Users\\ladan\\Documents\\Research_Project\\position.csv', 'r') as file:
+    orbit = csv.reader(file, delimiter=' ')
+    for pos in orbit:
+        r.append(float(pos[0]))
+
+with open('C:\\Users\\ladan\\Documents\\Research_Project\\phi.csv', 'r') as file2:
+    angles = csv.reader(file2, delimiter=' ')
+    for angle in angles:
+        a.append(float(angle[0]))
+
+""""
+size = r.__sizeof__()
+for i in range(400):
+    x.append(r[i]*np.cos(a[i]))
+    y.append(r[i] * np.sin(a[i]))
+"""
+
+
+#Newtonian potential
+with open('C:\\Users\\ladan\\Documents\\Research_Project\\Newtonian.csv','r') as file:
+    N = csv.reader(file, delimiter=' ')
+    for row in N:
+        Newtonian.append(float(row[1]))
+
+
+#Effective potential
+with open('C:\\Users\\ladan\\Documents\\Research_Project\\Relativistic.csv','r') as file:
+    potential = csv.reader(file, delimiter=' ')
+    for row in potential:
+        pos.append(float(row[0]))
+        effective_p.append(float(row[1]))
+
+with open('C:\\Users\\ladan\\Documents\\Research_Project\\energy.csv','r') as file:
+    energyfile = csv.reader(file, delimiter=' ')
+    for row in energyfile:
+        E = float(row[0])
+
+
+#Gravitational waveform
+with open('C:\\Users\\ladan\\Documents\\Research_Project\\gravitational_waveform.csv','r') as file:
+    waveform = csv.reader(file, delimiter=' ')
+    for row in waveform:
+        h_cross.append(float(row[0]))
+        h_plus.append(float(row[1]))
+
+#Energy
+#energy = []
+#with open('C:\\Users\\ladan\\Documents\\Research_Project\\energy.csv','r') as file:
+ #   energy = csv.reader(file, delimiter=' ')
+  #  for row in energy:
+   #     E = row[0]
+
+
+fig,axs = plt.subplots(2,2,figsize=(17,18))
+axs[0,0].plot(x,y,linewidth=0.1)
+axs[0,0].plot(0,0,'go')
+axs[0,1].plot(pos[1:],effective_p, linewidth = 0.5)
+#axs[0,1].plot(pos,Newtonian, linewidth = 0.5)
+axs[1,0].plot(time,h_cross, linewidth = 0.01)
+axs[1,1].plot(time,h_plus, linewidth = 0.01)
+
+axs[1,0].set_title('h cross polarization')
+axs[1,0].set_xticklabels([])
+axs[1,1].set_xticklabels([])
+axs[1,1].set_title('h plus polarization')
+axs[0,1].set_title('Effective potential')
+axs[0,1].set_ylabel('U effective')
+
+#axs[0,1].set(xlim=(pos[1]), ylim =(min(effective_p),max(effective_p)))
+axs[0,1].axhline(y=E, color='r', linestyle='-', linewidth = 1, label='Energy of the orbit')
+
+#axs[1,0].set(xlim=[0,100])
+#axs[1,1].set(xlim=[0,100])
+#axs[0,0].set_aspect(0.5)
+#axs[1,1].set_aspect(20)
+
+object, = axs[0,0].plot([],[],'bo')
+hcr, = axs[1,0].plot([],[], lw=1)
+hpl, = axs[1,1].plot([],[], lw=1)
+potn, = axs[0,1].plot([], [], 'ro')
+en, = axs[0,1].plot([],[], lw=1)
+axs[0, 0].autoscale(enable=True)
+#axs[1, 1].autoscale(enable=True)
+
+time_ = []
+h_cross_ = []
+h_plus_ = []
+title = axs[0, 0].set_title('Orbit')
+
+def init():
+    hcr.set_data([], [])
+    hpl.set_data([], [])
+    title = axs[0, 0].set_title('')
+    return hcr,hpl, title
+
+def animate(i):
+    #title.set_text("t = %.2d [unit]" % time[i])
+    potn.set_data(pos[i],effective_p[i])
+    object.set_data(x[i],y[i])
+    time_ = time[1:i]
+    h_cross_ = h_cross[1:i]
+    h_plus_ = h_plus[1:i]
+    hcr.set_data(time_, h_cross_)
+    hpl.set_data(time_, h_plus_)
+    axs[1,0].set( xlim=(30, time[i]))
+    axs[1,1].set(xlim=(30, time[i]))
+    return object, title, hcr, hpl, potn,
+
+
+
+ani = matplotlib.animation.FuncAnimation(fig, animate, init_func=init,
+                               frames=2000, interval=50, blit=True)
+
+#Writer = animation.writers['ffmpeg']
+#writer = Writer(fps=10, metadata=dict(artist='Me'), bitrate=1800)
+#ani.save('simulation.mp4', writer=writer)
+plt.show()
+
+
+
